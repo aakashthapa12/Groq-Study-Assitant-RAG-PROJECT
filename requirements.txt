@@ -4,3 +4,4 @@ faiss-cpu
 pypdf
 langchain-community
 google-generativeai
+langchain-google-genai
