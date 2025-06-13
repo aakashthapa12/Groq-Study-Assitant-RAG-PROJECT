@@ -121,6 +121,11 @@ if uploaded_file:
         progress_bar.progress(40)
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
         docs = text_splitter.split_documents(pages)
+        if not docs or all(len(doc.page_content.strip()) == 0 for doc in docs):
+            st.error("🚫 The uploaded PDF appears to contain no readable text. It may be scanned or image-based. Please upload a text-based PDF.")
+            os.unlink(temp_file_path)
+            st.stop()
+
 
         progress_bar.progress(60)
         embeddings = GoogleGenerativeAIEmbeddings(
