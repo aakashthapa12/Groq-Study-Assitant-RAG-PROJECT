@@ -5,3 +5,6 @@ pypdf
 langchain-community
 google-generativeai
 langchain-google-genai
+sentence-transformers
+transformers
+torch
