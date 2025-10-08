@@ -138,7 +138,7 @@ if uploaded_file:
         progress_bar.progress(90)
         llm = ChatGoogleGenerativeAI(
             model="models/gemini-2.0-flash",
-            temperature=0.3,
+            temperature=0.25,
             google_api_key=GOOGLE_API_KEY,
         )
 
