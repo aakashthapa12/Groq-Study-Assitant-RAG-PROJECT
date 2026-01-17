@@ -134,7 +134,7 @@ if uploaded_file:
         )
 
         progress_bar.progress(80)
-        vectorstore = FAISS.from_documents(docs, embeddings)
+        vectorstore = FAISS.from_documents(docs, embeddings)    
         retriever = vectorstore.as_retriever()
 
         progress_bar.progress(90)
