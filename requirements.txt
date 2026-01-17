@@ -5,3 +5,7 @@ pypdf
 langchain-community
 google-generativeai
 langchain-google-genai
+langchain-huggingface
+sentence-transformers
+transformers
+torch
