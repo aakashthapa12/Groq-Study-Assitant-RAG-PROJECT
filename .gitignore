@@ -4,3 +4,4 @@ __pycache__/
 venv/
 .secrets.toml
 *.pdf
+rag_env/
