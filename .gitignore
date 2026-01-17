@@ -5,3 +5,4 @@ venv/
 .secrets.toml
 *.pdf
 rag_env/
+.streamlit/secrets.toml
