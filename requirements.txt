@@ -4,8 +4,10 @@ faiss-cpu
 pypdf
 langchain-community
 google-generativeai
-langchain-google-genai
+langchain-groq
 langchain-huggingface
 sentence-transformers
 transformers
 torch
+langchain-classic
+langchain-core
