@@ -1,5 +1,6 @@
 streamlit
 langchain
+langchain-text-splitters
 faiss-cpu
 pypdf
 langchain-community
@@ -9,5 +10,4 @@ langchain-huggingface
 sentence-transformers
 transformers
 torch
-langchain-classic
 langchain-core
