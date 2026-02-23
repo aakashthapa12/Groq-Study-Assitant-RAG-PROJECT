@@ -11,3 +11,6 @@ sentence-transformers
 transformers
 torch
 langchain-core
+streamlit-authenticator
+bcrypt
+PyYAML

@@ -6,3 +6,4 @@ venv/
 *.pdf
 rag_env/
 .streamlit/secrets.toml
+users.yaml

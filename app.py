@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit_authenticator as stauth
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
@@ -13,6 +14,9 @@ from langchain_core.prompts import ChatPromptTemplate
 import tempfile
 import os
 import re
+import yaml
+import bcrypt
+from yaml.loader import SafeLoader
 
 # Configure page
 st.set_page_config(
@@ -22,64 +26,230 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for better UI
+# ─── Load users from YAML ───────────────────────────────────────────────────
+USERS_FILE = os.path.join(os.path.dirname(__file__), "users.yaml")
+
+def load_users():
+    with open(USERS_FILE) as f:
+        return yaml.load(f, Loader=SafeLoader)
+
+def save_users(config):
+    with open(USERS_FILE, "w") as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+# ─── Global CSS ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main {
-        padding: 2rem;
-        max-width: 900px;
-        margin: 0 auto;
+    .stApp { background-color: #0E2148; }
+
+    /* ── Auth form wrapper ── */
+    .auth-box {
+        background-color: #1C2F5E;
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
+        max-width: 420px;
+        margin: 3rem auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.35);
     }
-    .stApp {
-        background-color: #0E2148;
+    .auth-title {
+        text-align: center;
+        color: #E3D095;
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
     }
+    .auth-subtitle {
+        text-align: center;
+        color: #a0aec0;
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* ── Main app cards ── */
+    .main { padding: 2rem; max-width: 900px; margin: 0 auto; }
     .card {
         background-color: #7965C1;
         border-radius: 10px;
         padding: 20px;
         margin-bottom: 20px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        cursor: pointer;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-    .card-question {
-        font-weight: bold;
-        font-size: 1.1rem;
-        color: #E3D095;
-    }
-    .card-answer {
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 1px solid #eee;
-    }
-    .header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .header h1 {
-        color: #E3D095;
-        margin-bottom: 0.5rem;
-    }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    .card-question { font-weight: bold; font-size: 1.1rem; color: #E3D095; }
+    .card-answer { margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+    .header { text-align: center; margin-bottom: 2rem; }
+    .header h1 { color: #E3D095; margin-bottom: 0.5rem; }
     .mode-selector {
-        background-color: #483AA0;
-        padding: 15px;
-        border-radius: 10px;
-        margin: 20px 0;
+        background-color: #483AA0; padding: 15px;
+        border-radius: 10px; margin: 20px 0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
     .upload-section {
-        background-color: #483AA0;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        background-color: #483AA0; padding: 20px;
+        border-radius: 10px; margin-bottom: 20px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
+
+    /* Hide default Streamlit auth labels colour */
+    label { color: #E3D095 !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# ─── Auth Setup ──────────────────────────────────────────────────────────────
+config = load_users()
+
+authenticator = stauth.Authenticate(
+    config["credentials"],
+    config["cookie"]["name"],
+    config["cookie"]["key"],
+    config["cookie"]["expiry_days"],
+)
+
+# ─── Session state for page switching + signup field persistence ─────────────
+if "auth_page" not in st.session_state:
+    st.session_state.auth_page = "login"   # "login" | "signup"
+
+# Persist signup field values so they survive validation reruns
+for _key in ["signup_name", "signup_username", "signup_email", "signup_error", "signup_success"]:
+    if _key not in st.session_state:
+        st.session_state[_key] = ""
+
+# ════════════════════════════════════════════════════════════════════════════
+# SIGNUP PAGE
+# ════════════════════════════════════════════════════════════════════════════
+def show_signup():
+    st.markdown("""
+    <div style="text-align:center; margin-top:2rem;">
+        <h1 style="color:#E3D095;">📚 Groq Study Assistant</h1>
+        <p style="color:#a0aec0;">Create your free account</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Show persistent feedback messages
+    if st.session_state.signup_error:
+        st.error(st.session_state.signup_error)
+    if st.session_state.signup_success:
+        st.success(st.session_state.signup_success)
+
+    # ── Form WITHOUT clear_on_submit so values are NOT wiped on error ────────
+    with st.form("signup_form", clear_on_submit=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            new_name = st.text_input("👤 Full Name", value=st.session_state.signup_name)
+        with col2:
+            new_username = st.text_input("🔑 Username", value=st.session_state.signup_username)
+
+        new_email    = st.text_input("📧 Email",            value=st.session_state.signup_email)
+        new_password = st.text_input("🔒 Password",         type="password")
+        confirm_pw   = st.text_input("🔒 Confirm Password", type="password")
+        submit = st.form_submit_button("✅ Create Account", use_container_width=True)
+
+        if submit:
+            # ── Persist non-sensitive fields immediately ──────────────────
+            st.session_state.signup_name     = new_name.strip()
+            st.session_state.signup_username = new_username.strip().lower()
+            st.session_state.signup_email    = new_email.strip()
+            st.session_state.signup_error    = ""
+            st.session_state.signup_success  = ""
+
+            name     = st.session_state.signup_name
+            username = st.session_state.signup_username
+            email    = st.session_state.signup_email
+
+            # ── Validation ───────────────────────────────────────────────
+            if not all([name, username, email, new_password, confirm_pw]):
+                st.session_state.signup_error = "⚠️ Please fill in all fields."
+            elif new_password != confirm_pw:
+                st.session_state.signup_error = "❌ Passwords do not match."
+            elif len(new_password) < 6:
+                st.session_state.signup_error = "⚠️ Password must be at least 6 characters."
+            elif username in config["credentials"]["usernames"]:
+                st.session_state.signup_error = "❌ Username already exists. Please choose another."
+            elif "@" not in email:
+                st.session_state.signup_error = "⚠️ Please enter a valid email."
+            else:
+                # ── Hash & save ──────────────────────────────────────────
+                hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt(12)).decode()
+                config["credentials"]["usernames"][username] = {
+                    "email": email,
+                    "name": name,
+                    "password": hashed_pw,
+                }
+                save_users(config)
+                # Clear all signup state on success
+                for _k in ["signup_name", "signup_username", "signup_email", "signup_error"]:
+                    st.session_state[_k] = ""
+                st.session_state.signup_success = f"🎉 Account created for **{name}**! You can now log in."
+                st.session_state.auth_page = "login"
+            st.rerun()
+
+    st.markdown("---")
+    col_l, col_r = st.columns([3, 1])
+    with col_l:
+        st.markdown('<p style="color:#a0aec0; margin-top:0.6rem;">Already have an account?</p>', unsafe_allow_html=True)
+    with col_r:
+        if st.button("🔐 Log In", use_container_width=True):
+            st.session_state.signup_error   = ""
+            st.session_state.signup_success = ""
+            st.session_state.auth_page = "login"
+            st.rerun()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# LOGIN PAGE  (rendered by streamlit-authenticator)
+# ════════════════════════════════════════════════════════════════════════════
+def show_login():
+    st.markdown("""
+    <div style="text-align:center; margin-top:2rem;">
+        <h1 style="color:#E3D095;">📚 Groq Study Assistant</h1>
+        <p style="color:#a0aec0;">Sign in to continue</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Show success message carried over from signup
+    if st.session_state.get("signup_success"):
+        st.success(st.session_state.signup_success)
+        st.session_state.signup_success = ""
+
+    authenticator.login(location="main")
+
+    if st.session_state.get("authentication_status") is False:
+        st.error("❌ Incorrect username or password.")
+    elif st.session_state.get("authentication_status") is None:
+        st.info("ℹ️ Enter your credentials above to log in.")
+
+    st.markdown("---")
+    col_l, col_r = st.columns([3, 1])
+    with col_l:
+        st.markdown('<p style="color:#a0aec0; margin-top:0.6rem;">Don\'t have an account?</p>', unsafe_allow_html=True)
+    with col_r:
+        if st.button("📝 Sign Up", use_container_width=True):
+            st.session_state.auth_page = "signup"
+            st.rerun()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# ROUTE: show login / signup until authenticated
+# ════════════════════════════════════════════════════════════════════════════
+if not st.session_state.get("authentication_status"):
+    if st.session_state.auth_page == "signup":
+        show_signup()
+    else:
+        show_login()
+    st.stop()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# MAIN APP  (only reached when logged in)
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── Top-right logout button ──────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown(f"### 👋 Welcome, **{st.session_state.get('name', 'User')}**!")
+    st.markdown(f"🔑 `{st.session_state.get('username', '')}`")
+    st.markdown("---")
+    authenticator.logout("🚪 Logout", location="sidebar")
 
 # Header
 st.markdown('<div class="header"><h1>📚 Groq Study Assistant</h1></div>', unsafe_allow_html=True)
