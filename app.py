@@ -8,7 +8,6 @@ from langchain_groq import ChatGroq
 
 # ✅ Modern LangChain RAG imports (2026)
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
-from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -519,13 +518,19 @@ Question: {input}
 Give a clear, concise, student-friendly answer.
 """)
 
-    document_chain = create_stuff_documents_chain(llm, prompt)
+    document_chain = prompt | llm | StrOutputParser()
     qa_chain = (
         RunnableParallel(
             context=(lambda x: x["input"]) | retriever,
             input=RunnablePassthrough()
         )
-        | document_chain
+        | RunnableParallel(
+            context=lambda x: "\n\n".join(doc.page_content for doc in x["context"]),
+            input=lambda x: x["input"]["input"]
+        )
+        | prompt
+        | llm
+        | StrOutputParser()
     )
     streaming_chain = (
         RunnableParallel(
