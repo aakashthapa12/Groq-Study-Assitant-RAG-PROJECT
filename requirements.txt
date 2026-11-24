@@ -1,13 +1,26 @@
-streamlit
-langchain
-langchain-text-splitters
-faiss-cpu
-pypdf
-langchain-community
-google-generativeai
-langchain-groq
-langchain-huggingface
-sentence-transformers
-transformers
-torch
-langchain-core
+# Exact versions that were tested together (Python 3.13, November 2026).
+# Versions are pinned on purpose: the old file had no versions, so when LangChain 1.0
+# came out, a fresh install pulled it in and the app crashed on startup.
+# Needs Python 3.11 or newer.
+
+# Web UI
+streamlit==1.67.0
+
+# LangChain pieces used by app.py
+langchain-core==1.8.4             # Document, prompts, the "|" pipe syntax, output parser
+langchain-text-splitters==1.2.0   # RecursiveCharacterTextSplitter
+langchain-huggingface==1.3.0      # HuggingFaceEmbeddings
+langchain-groq==1.2.1             # ChatGroq (the LLM)
+groq==1.7.0                       # Groq SDK, used directly to catch its error types
+
+# Vector search and PDF reading
+# (langchain-community used to provide PyPDFLoader and a FAISS wrapper, but it was archived
+#  in June 2026, so the app now uses pypdf and FAISS directly.)
+faiss-cpu==1.16.0
+numpy==2.5.5
+pypdf==7.1.1
+
+# Embedding model (all-MiniLM-L6-v2) runs locally with these
+sentence-transformers==6.3.0
+transformers==5.24.1
+torch==2.15.0

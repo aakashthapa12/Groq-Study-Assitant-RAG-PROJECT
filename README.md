@@ -5,9 +5,20 @@ A powerful AI-powered study assistant that uses **RAG (Retrieval Augmented Gener
 ## ✨ Features
 
 - 📄 **PDF Upload**: Upload lecture notes, textbooks, or any study material
-- ❓ **Ask Questions**: Get instant answers from your documents
+- ❓ **Ask Questions**: Get answers from your document, with the source pages shown
 - 📝 **Summarize Notes**: Generate bullet-point summaries for quick revision
 - 🧠 **Generate Flashcards**: Create Q&A flashcards (3-10 cards) for studying
+
+## ⚙️ How It Works
+
+1. **Load** - read the text of each PDF page (first 50 pages) with pypdf
+2. **Split** - cut the text into chunks of up to 500 characters with 100 characters of overlap
+3. **Embed** - turn each chunk into a 384-number vector with the `all-MiniLM-L6-v2` model
+4. **Index** - store the vectors in a FAISS index that ranks chunks by cosine similarity
+5. **Retrieve** - for a question, find the 4 most similar chunks
+6. **Generate** - send only those chunks and the question to the LLM on Groq, which is told to answer only from them
+
+Summaries and flashcards use chunks spread evenly across the whole document instead of similarity search, so they cover the beginning, middle and end.
 
 ## 🚀 Tech Stack
 
@@ -15,13 +26,13 @@ A powerful AI-powered study assistant that uses **RAG (Retrieval Augmented Gener
 - **LangChain** - RAG framework
 - **FAISS** - Vector database for document embeddings
 - **HuggingFace** - Text embeddings (all-MiniLM-L6-v2)
-- **Groq** - Ultra-fast LLM inference (llama-3.3-70b-versatile)
+- **Groq** - Ultra-fast LLM inference (openai/gpt-oss-120b)
 - **PyPDF** - PDF processing
 
 ## 📦 Installation
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.11+ (tested on 3.13)
 - Groq API Key ([Get it here](https://console.groq.com))
 
 ### Setup
@@ -34,7 +45,7 @@ A powerful AI-powered study assistant that uses **RAG (Retrieval Augmented Gener
 
 2. **Create virtual environment**
    ```bash
-   python3 -m venv venv
+   python3.13 -m venv venv   # any Python 3.11+ works
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
@@ -61,6 +72,15 @@ A powerful AI-powered study assistant that uses **RAG (Retrieval Augmented Gener
    ```
 
 The app will open in your browser at `http://localhost:8501`
+
+## ☁️ Deploying on Streamlit Community Cloud
+
+1. Push the code to GitHub and create a new app with `app.py` as the main file
+2. In **Advanced settings**, choose **Python 3.13** (the version this app was tested with)
+3. In **Secrets**, add:
+   ```toml
+   GROQ_API_KEY = "your_groq_api_key_here"
+   ```
 
 ## 🔀 Branching Strategy
 
