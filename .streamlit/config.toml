@@ -5,3 +5,13 @@ gatherUsageStats = false
 headless = true
 enableCORS = false
 enableXsrfProtection = false
+
+# App colours. Setting them in the theme (instead of only in CSS) makes Streamlit's own
+# widgets, text and buttons match, so the text stays readable even when the visitor's
+# browser is in light mode.
+[theme]
+base = "dark"
+backgroundColor = "#0E2148"           # page background (navy)
+secondaryBackgroundColor = "#1B2D5E"  # inputs, dropdowns and expanders (lighter navy)
+primaryColor = "#E3D095"              # buttons, slider and highlights (gold)
+textColor = "#FFFFFF"
