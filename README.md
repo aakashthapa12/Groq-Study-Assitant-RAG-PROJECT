@@ -32,7 +32,7 @@ Summaries and flashcards use chunks spread evenly across the whole document inst
 ## 📦 Installation
 
 ### Prerequisites
-- Python 3.11+ (tested on 3.13)
+- Python 3.12+ (tested on 3.13)
 - Groq API Key ([Get it here](https://console.groq.com))
 
 ### Setup
@@ -45,7 +45,7 @@ Summaries and flashcards use chunks spread evenly across the whole document inst
 
 2. **Create virtual environment**
    ```bash
-   python3.13 -m venv venv   # any Python 3.11+ works
+   python3.13 -m venv venv   # any Python 3.12+ works
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
