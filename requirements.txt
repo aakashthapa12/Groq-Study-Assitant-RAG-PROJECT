@@ -1,7 +1,7 @@
 # Exact versions that were tested together (Python 3.13, November 2026).
 # Versions are pinned on purpose: the old file had no versions, so when LangChain 1.0
 # came out, a fresh install pulled it in and the app crashed on startup.
-# Needs Python 3.11 or newer.
+# Needs Python 3.12 or newer (numpy 2.5 does not support 3.11). Tested on 3.13.
 
 # Web UI
 streamlit==1.67.0
